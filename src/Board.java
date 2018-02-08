@@ -40,6 +40,7 @@ public class Board {
 		void pickUpAt(Point pos){
 			int key = grid[pos.x][pos.y];
 			if(key == 0){ return; } //tile guard
+			window.clickAlpha = !window.clickAlpha; //boolean flip
 			if(currentlySelected != null){
 				if(currentlySelected.inAnimation){ return; } //animate guard
 			}
@@ -48,6 +49,7 @@ public class Board {
 		}
 		
 		void dropOffAt(Point pos){
+			window.clickAlpha = !window.clickAlpha;//boolean flip
 			//queue in currentlySelected postions
 			currentlySelected.inSelection = false;
 			currentlySelected.finalPos = pos;

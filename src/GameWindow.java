@@ -29,7 +29,6 @@ public class GameWindow extends JPanel{
 			@Override
 			public void mouseClicked(MouseEvent e) {
 				// TODO Auto-generated method stub
-				clickAlpha = !clickAlpha;
 				if(clickAlpha){
 					gameBoard.pickUpAt(clickToRC(e.getX(),e.getY()));
 				}else{
