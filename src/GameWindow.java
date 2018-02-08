@@ -72,7 +72,7 @@ public class GameWindow extends JPanel{
 	}
 
 	void gameStart(){
-		clickAlpha = false; //reseting clickAlpha bool
+		clickAlpha = true; //reseting clickAlpha bool
 		gameBoard = new Board(8,8,this);
 		repaint();
 	}
