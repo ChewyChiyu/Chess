@@ -39,8 +39,10 @@ public class Board {
 
 		void pickUpAt(Point pos){
 			int key = grid[pos.x][pos.y];
-			System.out.println(pos);
 			if(key == 0){ return; } //tile guard
+			if(currentlySelected != null){
+				if(currentlySelected.inAnimation){ return; } //animate guard
+			}
 			currentlySelected = new Piece(key, (key < 0) ? false : true, pos, this);
 			window.repaint();
 		}
