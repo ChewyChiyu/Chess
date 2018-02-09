@@ -50,9 +50,9 @@ public class Piece {
 				if(Math.abs(key) == 1 && (finalPos.x == 0|| finalPos.x == b.grid.length)){
 					key*= 5; //Changing a pawn to queen if on other side
 				}
+				
+				//setting spot in grid
 				b.grid[finalPos.x][finalPos.y][0] = key;
-				//no longer first move of piece, turning 0 flag to 1
-				b.grid[finalPos.x][finalPos.y][1] = 1;
 				
 				b.updateGameState(); //updating the state of the game
 				//repaint
@@ -60,6 +60,8 @@ public class Piece {
 				//drawing grid
 				if(initialPos.x != finalPos.x || initialPos.y != finalPos.y){ //same place guard
 					b.whiteTurn = !b.whiteTurn; //no longer whites turn 
+					//no longer first move of piece, turning 0 flag to 1
+					b.grid[finalPos.x][finalPos.y][1] = 1;
 				}
 				//b.drawBoard();
 			}
