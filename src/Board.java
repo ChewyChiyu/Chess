@@ -28,9 +28,7 @@ public class Board {
 
 		GameState state;
 
-		ArrayList<Point> inCheckChoices = new ArrayList<Point>();
-		
-		
+
 		public Board(int row, int col, GameWindow window){
 			grid = new int[row][col][1];
 			this.window = window;
@@ -54,14 +52,6 @@ public class Board {
 			if(whiteTurn && key < 0) { return; } //wrong turn guard
 			if(!whiteTurn && key > 0) { return; } //wrong turn guard
 			if(state == GameState.CHECKMATE_BLACK || state == GameState.CHECKMATE_WHITE){ return; } //gameover guard 
-			boolean validChoice = false;
-			for(Point p : inCheckChoices){ 
-				if(p.x == pos.x && p.y == pos.y){
-					validChoice = true;
-				}
-			}
-			if(!validChoice && !inCheckChoices.isEmpty()){ return; } // returning if not a in check choice
-			
 			window.clickAlpha = !window.clickAlpha; //boolean flip
 			if(currentlySelected != null){ //selected guard
 				if(currentlySelected.inAnimation){ return; } //animate guard
@@ -72,26 +62,26 @@ public class Board {
 
 		void dropOffAt(Point pos){
 			if(!validMoveTo(currentlySelected.initialPos,pos, currentlySelected.type, currentlySelected.isWhite, currentlySelected.key, grid)) { return; } // not a valid move
-			
 			//checking to see if spot will result in a check
 			int[][][] gridClone = getClone(grid); //artificial move
 			int key = gridClone[currentlySelected.initialPos.x][currentlySelected.initialPos.y][0];
 			gridClone[currentlySelected.initialPos.x][currentlySelected.initialPos.y][0] = 0;
 			gridClone[pos.x][pos.y][1] = 0;
 			gridClone[pos.x][pos.y][0] = key;
-			drawBoard(gridClone);
 			if(inCheck(gridClone) == GameState.CHECK_BLACK && !currentlySelected.isWhite){
-				return;
+				if(currentlySelected.initialPos.x != pos.x || currentlySelected.initialPos.y != pos.y){
+					return;
+				}
 			}
 			if(inCheck(gridClone) == GameState.CHECK_WHITE && currentlySelected.isWhite){
-				return;
-			}
-			
-			
+				if(currentlySelected.initialPos.x != pos.x || currentlySelected.initialPos.y != pos.y){
+					return;
+				}
+			}			
+
 			window.clickAlpha = !window.clickAlpha;//boolean flip
-			
-			
-				
+
+
 			//queue in currentlySelected postions
 			currentlySelected.inSelection = false;
 			currentlySelected.finalPos = pos;
@@ -111,7 +101,6 @@ public class Board {
 			Point kingPosB = new Point();
 			Point possibleCheck = new Point();
 			GameState state = GameState.IDLE;
-			inCheckChoices.clear();
 			//scanning arr for king
 			//instance of inCheck() method here to initialize variables
 			for(int row = 0; row < grid.length; row++){
@@ -143,67 +132,63 @@ public class Board {
 				}
 
 			}
-				if(state == GameState.IDLE){ return state; }
-				
-				boolean isWhite = (state == GameState.CHECK_WHITE) ? true : false;
-				int kingKey = (state == GameState.CHECK_WHITE) ? 6 : -6;
-				Point kingPos = (state == GameState.CHECK_WHITE) ? kingPosW : kingPosB;
-			
-				//check Path
-				Point[] checkPath = getPath(possibleCheck,kingPos);
-				boolean checkMate = true;
+			if(state == GameState.IDLE){ return state; }
 
-				//first try moving the checked king
-				Point[] kingStruggle = new Point[]{new Point(kingPos.x+1, kingPos.y),new Point(kingPos.x-1, kingPos.y),new Point(kingPos.x, kingPos.y-1),new Point(kingPos.x, kingPos.y+1), new Point(kingPos.x-1, kingPos.y-1),new Point(kingPos.x+1, kingPos.y-1),new Point(kingPos.x-1, kingPos.y+1),new Point(kingPos.x+1, kingPos.y+1)};
-				for(Point p : kingStruggle){
-					try{
-						if(validMoveTo(kingPos ,p, PieceType.getType(Math.abs(grid[kingPos.x][kingPos.y][0])), isWhite, grid[kingPos.x][kingPos.y][0], grid)){
-							//seeing if that move would also result in a check
-							int[][][] gridClone = getClone(grid); //artificial move
-							gridClone[kingPos.x][kingPos.y][0] = 0;
-							gridClone[kingPos.x][kingPos.y][1] = 0;
-							gridClone[p.x][p.y][0] = kingKey;
-							if(inCheck(gridClone) == GameState.IDLE){
-								//checkMate avoided
-								inCheckChoices.add(kingPos); //adding possible block to choices
-								System.out.println(kingPos);
-								checkMate = false;
-							}
+			boolean isWhite = (state == GameState.CHECK_WHITE) ? true : false;
+			int kingKey = (state == GameState.CHECK_WHITE) ? 6 : -6;
+			Point kingPos = (state == GameState.CHECK_WHITE) ? kingPosW : kingPosB;
 
+			//check Path
+			Point[] checkPath = getPath(possibleCheck,kingPos);
+			boolean checkMate = true;
+
+			//first try moving the checked king
+			Point[] kingStruggle = new Point[]{new Point(kingPos.x+1, kingPos.y),new Point(kingPos.x-1, kingPos.y),new Point(kingPos.x, kingPos.y-1),new Point(kingPos.x, kingPos.y+1), new Point(kingPos.x-1, kingPos.y-1),new Point(kingPos.x+1, kingPos.y-1),new Point(kingPos.x-1, kingPos.y+1),new Point(kingPos.x+1, kingPos.y+1)};
+			for(Point p : kingStruggle){
+				try{
+					if(validMoveTo(kingPos ,p, PieceType.getType(Math.abs(grid[kingPos.x][kingPos.y][0])), isWhite, grid[kingPos.x][kingPos.y][0], grid)){
+						//seeing if that move would also result in a check
+						int[][][] gridClone = getClone(grid); //artificial move
+						gridClone[kingPos.x][kingPos.y][0] = 0;
+						gridClone[kingPos.x][kingPos.y][1] = 0;
+						gridClone[p.x][p.y][0] = kingKey;
+						if(inCheck(gridClone) == GameState.IDLE){
+							//checkMate avoided
+							checkMate = false;
 						}
-					}catch(Exception e) { } //edge guard
-				}
-				
-				//second try blocking check path
-				for(int row = 0; row < grid.length; row++){
-					for(int col = 0; col < grid[0].length; col++){
-						if((grid[row][col][0] * kingKey > 0) && grid[row][col][0] != kingKey){ //scanning for allies
-							Point possibleBlock = new Point(row,col);
-							for(Point p : checkPath){
-								if(validMoveTo(possibleBlock , p, PieceType.getType(Math.abs(grid[row][col][0])), isWhite, grid[row][col][0], grid)){
-									//seeing if that move would also result in a check
-									int[][][] gridClone = getClone(grid); //artificial move
-									int keyClone = grid[possibleBlock.x][possibleBlock.y][0];
-									gridClone[possibleBlock.x][possibleBlock.y][0] = 0;
-									gridClone[possibleBlock.x][possibleBlock.y][1] = 0;
-									gridClone[p.x][p.y][0] = keyClone;
-									gridClone[p.x][p.y][1] = 1;
-									if(inCheck(gridClone) == GameState.IDLE){
-										//checkMate avoided
-										System.out.println(possibleBlock);
-										inCheckChoices.add(possibleBlock); //adding possible block to choices
-										checkMate = false;
-									}
+
+					}
+				}catch(Exception e) { } //edge guard
+			}
+
+			//second try blocking check path
+			for(int row = 0; row < grid.length; row++){
+				for(int col = 0; col < grid[0].length; col++){
+					if((grid[row][col][0] * kingKey > 0) && grid[row][col][0] != kingKey){ //scanning for allies
+						Point possibleBlock = new Point(row,col);
+						for(Point p : checkPath){
+							if(validMoveTo(possibleBlock , p, PieceType.getType(Math.abs(grid[row][col][0])), isWhite, grid[row][col][0], grid)){
+								//seeing if that move would also result in a check
+								int[][][] gridClone = getClone(grid); //artificial move
+								int keyClone = grid[possibleBlock.x][possibleBlock.y][0];
+								gridClone[possibleBlock.x][possibleBlock.y][0] = 0;
+								gridClone[possibleBlock.x][possibleBlock.y][1] = 0;
+								gridClone[p.x][p.y][0] = keyClone;
+								gridClone[p.x][p.y][1] = 1;
+								if(inCheck(gridClone) == GameState.IDLE){
+									//checkMate avoided
+									checkMate = false;
 								}
 							}
 						}
-					
+					}
+
 				}
-				
+
 
 			}
 			if(checkMate){
-				state = GameState.CHECKMATE_BLACK;
+				state = (isWhite) ? GameState.CHECK_WHITE : GameState.CHECKMATE_BLACK;
 			}
 			return state;
 		}
@@ -220,12 +205,12 @@ public class Board {
 			}
 			return cloned;
 		}
-		
+
 		GameState inCheck(int[][][] grid){
 			Point kingPosW = new Point();
 			Point kingPosB = new Point();
 			GameState state = GameState.IDLE;
-			
+
 			//scanning arr for king
 			//instance of inCheck() method here to initialize variables
 			for(int row = 0; row < grid.length; row++){
@@ -260,7 +245,7 @@ public class Board {
 
 
 		boolean validMoveTo(Point o , Point p, PieceType type, boolean isWhite, int key, int[][][] grid){  //switch of piece type
-			
+
 			//first checking to see if trying to take already set point
 			if(o.x == p.x && o.y == p.y){
 				return true;
