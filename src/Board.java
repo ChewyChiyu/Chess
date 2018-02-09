@@ -1,6 +1,7 @@
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Point;
+import java.util.ArrayList;
 
 public class Board {
 	//A 3D Array to keep track of all the pieces on the board and if they have been move: denoted by 1 and 0
@@ -27,6 +28,9 @@ public class Board {
 
 		GameState state;
 
+		ArrayList<Point> inCheckChoices = new ArrayList<Point>();
+		
+		
 		public Board(int row, int col, GameWindow window){
 			grid = new int[row][col][1];
 			this.window = window;
@@ -34,7 +38,7 @@ public class Board {
 			SPACER = (int) (((window.gameDim.height/grid.length)) * 0.97);
 			state = GameState.IDLE;
 			resetBoard(row,col);
-			drawBoard();
+			drawBoard(grid);
 		}
 
 		void resetBoard(int row, int col){ //reseting pieces to standard board
@@ -50,6 +54,11 @@ public class Board {
 			if(whiteTurn && key < 0) { return; } //wrong turn guard
 			if(!whiteTurn && key > 0) { return; } //wrong turn guard
 			if(state == GameState.CHECKMATE_BLACK || state == GameState.CHECKMATE_WHITE){ return; } //gameover guard 
+			for(Point p : inCheckChoices){ 
+				if(p.x != pos.x || p.y != pos.y){
+					return;
+				}
+			}
 			window.clickAlpha = !window.clickAlpha; //boolean flip
 			if(currentlySelected != null){ //selected guard
 				if(currentlySelected.inAnimation){ return; } //animate guard
@@ -80,6 +89,7 @@ public class Board {
 			Point kingPosB = new Point();
 			Point possibleCheck = new Point();
 			GameState state = GameState.IDLE;
+			inCheckChoices.clear();
 			//scanning arr for king
 			//instance of inCheck() method here to initialize variables
 			for(int row = 0; row < grid.length; row++){
@@ -111,24 +121,29 @@ public class Board {
 				}
 
 			}
-			//if in check
-			if(state == GameState.CHECK_BLACK){ //look for recovery options, trying to block checkPath
+				if(state == GameState.IDLE){ return state; }
+				
+				boolean isWhite = (state == GameState.CHECK_WHITE) ? true : false;
+				int kingKey = (state == GameState.CHECK_WHITE) ? 6 : -6;
+				Point kingPos = (state == GameState.CHECK_WHITE) ? kingPosW : kingPosB;
+			
 				//check Path
-				Point[] checkPath = getPath(possibleCheck,kingPosB);
+				Point[] checkPath = getPath(possibleCheck,kingPos);
 				boolean checkMate = true;
 
 				//first try moving the checked king
-				Point[] kingStruggle = new Point[]{new Point(kingPosB.x+1, kingPosB.y),new Point(kingPosB.x-1, kingPosB.y),new Point(kingPosB.x, kingPosB.y-1),new Point(kingPosB.x, kingPosB.y+1), new Point(kingPosB.x-1, kingPosB.y-1),new Point(kingPosB.x+1, kingPosB.y-1),new Point(kingPosB.x-1, kingPosB.y+1),new Point(kingPosB.x+1, kingPosB.y+1)};
+				Point[] kingStruggle = new Point[]{new Point(kingPos.x+1, kingPos.y),new Point(kingPos.x-1, kingPos.y),new Point(kingPos.x, kingPos.y-1),new Point(kingPos.x, kingPos.y+1), new Point(kingPos.x-1, kingPos.y-1),new Point(kingPos.x+1, kingPos.y-1),new Point(kingPos.x-1, kingPos.y+1),new Point(kingPos.x+1, kingPos.y+1)};
 				for(Point p : kingStruggle){
 					try{
-						if(validMoveTo(kingPosB ,p, PieceType.getType(Math.abs(grid[kingPosB.x][kingPosB.y][0])), false, grid[kingPosB.x][kingPosB.y][0], grid)){
+						if(validMoveTo(kingPos ,p, PieceType.getType(Math.abs(grid[kingPos.x][kingPos.y][0])), isWhite, grid[kingPos.x][kingPos.y][0], grid)){
 							//seeing if that move would also result in a check
 							int[][][] gridClone = getClone(grid); //artificial move
-							gridClone[kingPosB.x][kingPosB.y][0] = 0;
-							gridClone[kingPosB.x][kingPosB.y][1] = 0;
-							gridClone[p.x][p.y][0] = -6;
-							if(!isInCheck(gridClone)){
+							gridClone[kingPos.x][kingPos.y][0] = 0;
+							gridClone[kingPos.x][kingPos.y][1] = 0;
+							gridClone[p.x][p.y][0] = kingKey;
+							if(!inCheck(gridClone)){
 								//checkMate avoided
+								inCheckChoices.add(kingPos); //adding possible block to choices
 								checkMate = false;
 							}
 
@@ -139,31 +154,31 @@ public class Board {
 				//second try blocking check path
 				for(int row = 0; row < grid.length; row++){
 					for(int col = 0; col < grid[0].length; col++){
-						if(grid[row][col][0] < 0){ //scanning for allies
+						if(grid[row][col][0] < 0 && grid[row][col][0] != kingKey){ //scanning for allies
 							Point possibleBlock = new Point(row,col);
 							for(Point p : checkPath){
-								if(validMoveTo(possibleBlock , p, PieceType.getType(Math.abs(grid[row][col][0])), false, grid[row][col][0], grid)){
+								if(validMoveTo(possibleBlock , p, PieceType.getType(Math.abs(grid[row][col][0])), isWhite, grid[row][col][0], grid)){
 									//seeing if that move would also result in a check
 									int[][][] gridClone = getClone(grid); //artificial move
 									int keyClone = grid[possibleBlock.x][possibleBlock.y][0];
-									gridClone[possibleBlock.x][possibleBlock.x][0] = 0;
-									gridClone[possibleBlock.x][possibleBlock.x][1] = 0;
+									gridClone[possibleBlock.x][possibleBlock.y][0] = 0;
+									gridClone[possibleBlock.x][possibleBlock.y][1] = 0;
 									gridClone[p.x][p.y][0] = keyClone;
-									if(!isInCheck(gridClone)){
+									if(!inCheck(gridClone)){
 										//checkMate avoided
+										inCheckChoices.add(possibleBlock); //adding possible block to choices
 										checkMate = false;
 									}
 								}
 							}
 						}
-					}
+					
 				}
 				if(checkMate){
 					state = GameState.CHECKMATE_BLACK;
 				}
 
 			}
-
 			return state;
 		}
 
@@ -180,7 +195,7 @@ public class Board {
 			return cloned;
 		}
 		
-		boolean isInCheck(int[][][] grid){
+		boolean inCheck(int[][][] grid){
 			Point kingPosW = new Point();
 			Point kingPosB = new Point();
 			//scanning arr for king
@@ -215,7 +230,7 @@ public class Board {
 
 
 		boolean validMoveTo(Point o , Point p, PieceType type, boolean isWhite, int key, int[][][] grid){  //switch of piece type
-
+			
 			//first checking to see if trying to take already set point
 			if(o.x == p.x && o.y == p.y){
 				return true;
@@ -359,7 +374,7 @@ public class Board {
 			drawGrid(g);
 		}
 
-		void drawBoard(){
+		void drawBoard(int[][][] grid){
 			for(int[][] row : grid){
 				for(int[] col : row){
 					System.out.print(col[0] + "," + col[1] + ((col[0] < 0) ? " |" : "  |")); // spacing out pieces
