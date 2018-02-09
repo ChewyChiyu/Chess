@@ -77,12 +77,12 @@ public class Board {
 			
 			int[][][] gridClone = futureMove(currentlySelected.initialPos, pos, grid); //chceking to see if future position will be check
 			
-			if(inCheck(gridClone) == GameState.CHECK_BLACK && !currentlySelected.isWhite){
+			if(getState(gridClone) == GameState.CHECK_BLACK && !currentlySelected.isWhite){
 				if(currentlySelected.initialPos.x != pos.x || currentlySelected.initialPos.y != pos.y){ //allow if putting down in check
 					return;
 				}
 			}
-			if(inCheck(gridClone) == GameState.CHECK_WHITE && currentlySelected.isWhite){
+			if(getState(gridClone) == GameState.CHECK_WHITE && currentlySelected.isWhite){
 				if(currentlySelected.initialPos.x != pos.x || currentlySelected.initialPos.y != pos.y){ //allow if putting down in check
 					return;
 				}
@@ -104,7 +104,7 @@ public class Board {
 		void updateGameState(){ //checking to see the game State
 			state = scanForState(grid); //white , black scan for check
 		}			
-
+		
 		GameState scanForState(int[][][] grid){
 			Point kingPosW = new Point();
 			Point kingPosB = new Point();
@@ -112,16 +112,8 @@ public class Board {
 			GameState state = GameState.IDLE;
 			//scanning arr for king
 			//instance of inCheck() method here to initialize variables
-			for(int row = 0; row < grid.length; row++){
-				for(int col = 0; col < grid[0].length; col++){
-					if(grid[row][col][0] == 6){ //white king
-						kingPosW.setLocation(row, col);
-					}
-					if(grid[row][col][0] == -6){
-						kingPosB.setLocation(row, col);
-					}
-				}
-			}
+			kingPosW = getKingLocation(true,grid);
+			kingPosB = getKingLocation(false,grid);
 
 			//scanning arr for possibleCheck points
 			for(int row = 0; row < grid.length; row++){
@@ -141,7 +133,8 @@ public class Board {
 				}
 
 			}
-			if(state == GameState.IDLE){ return state; }
+			
+			if(state == GameState.IDLE){ return state; } //clear, not in check
 
 			boolean isWhite = (state == GameState.CHECK_WHITE) ? true : false;
 			int kingKey = (state == GameState.CHECK_WHITE) ? 6 : -6;
@@ -158,7 +151,7 @@ public class Board {
 					if(validMoveTo(kingPos ,p, PieceType.getType(Math.abs(grid[kingPos.x][kingPos.y][0])), isWhite, grid[kingPos.x][kingPos.y][0], grid)){
 						//seeing if that move would also result in a check
 						int[][][] gridClone = futureMove(kingPos, p, grid);
-						if(inCheck(gridClone) == GameState.IDLE){
+						if(getState(gridClone) == GameState.IDLE){
 							//checkMate avoided
 							checkMate = false;
 						}
@@ -176,7 +169,7 @@ public class Board {
 							if(validMoveTo(possibleBlock , p, PieceType.getType(Math.abs(grid[row][col][0])), isWhite, grid[row][col][0], grid)){
 								//seeing if that move would also result in a check
 								int[][][] gridClone = futureMove(possibleBlock, p, grid);
-								if(inCheck(gridClone) == GameState.IDLE){
+								if(getState(gridClone) == GameState.IDLE){
 									//checkMate avoided
 									checkMate = false;
 								}
@@ -194,6 +187,19 @@ public class Board {
 			return state;
 		}
 
+		
+		Point getKingLocation(boolean isWhite, int[][][] grid){
+			int lookingFor = (isWhite) ? 6 : -6;
+			for(int row = 0; row < grid.length; row++){
+				for(int col = 0; col < grid[0].length; col++){
+					if(grid[row][col][0] == lookingFor){
+						return new Point(row,col);
+					}
+				}
+			}
+			return null;
+		}
+		
 
 		int[][][] getClone(int[][][] grid){
 			int[][][] cloned = new int[grid.length][grid[0].length][grid[0][0].length];
@@ -207,41 +213,32 @@ public class Board {
 			return cloned;
 		}
 
-		GameState inCheck(int[][][] grid){
+		GameState getState(int[][][] grid){
 			Point kingPosW = new Point();
 			Point kingPosB = new Point();
-			GameState state = GameState.IDLE;
-
+			
 			//scanning arr for king
 			//instance of inCheck() method here to initialize variables
-			for(int row = 0; row < grid.length; row++){
-				for(int col = 0; col < grid[0].length; col++){
-					if(grid[row][col][0] == 6){ //white king
-						kingPosW.setLocation(row, col);
-					}
-					if(grid[row][col][0] == -6){
-						kingPosB.setLocation(row, col);
-					}
-				}
-			}
+			kingPosW = getKingLocation(true,grid);
+			kingPosB = getKingLocation(false,grid);
 
 			//scanning arr for possibleCheck points
 			for(int row = 0; row < grid.length; row++){
 				for(int col = 0; col < grid[0].length; col++){
 					if(grid[row][col][0] < 0){ //black pos
 						if(validMoveTo(new Point(row,col), kingPosW, PieceType.getType(Math.abs(grid[row][col][0])), false, grid[row][col][0], grid )){
-							state = GameState.CHECK_WHITE;
+							return GameState.CHECK_WHITE;
 						}
 					}
 					if(grid[row][col][0] > 0){ //white pos
 						if(validMoveTo(new Point(row,col), kingPosB, PieceType.getType(Math.abs(grid[row][col][0])), true, grid[row][col][0], grid )){
-							state = GameState.CHECK_BLACK;
+							return GameState.CHECK_BLACK;
 						}
 					}
 				}
 
 			}
-			return state;
+			return GameState.IDLE;
 		}
 
 
