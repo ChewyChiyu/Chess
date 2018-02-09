@@ -12,7 +12,7 @@ public class Board {
 		{{0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0}},
 		{{0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0}},
 		{{1 , 0} , {1 , 0} , {1 , 0} , {1 , 0} , {1 , 0} , {1 , 0} , {1 , 0} , {1 , 0}},
-		{{2 , 0} , {4 , 0} , {3 , 0} , {6 , 0} , {5 , 0} , {3 , 0} , {4 , 0} , {2 , 0}}}; 
+		{{2 , 0} , {4 , 0} , {3 , 0} , {5 , 0} , {6 , 0} , {3 , 0} , {4 , 0} , {2 , 0}}}; 
 
 
 		int[][][] grid; 
@@ -36,18 +36,18 @@ public class Board {
 			SPACER = (int) (((window.gameDim.height/grid.length)) * 0.97);
 			state = GameState.IDLE;
 			resetBoard(row,col);
-			drawBoard(grid);
+			//drawBoard(grid);
 		}
 
 		void resetBoard(int row, int col){ //reseting pieces to standard board
 
-			grid = STANDARD_GRID.clone(); //getting clone of standard board
+			grid = getClone(STANDARD_GRID); //getting clone of standard board
 
 		}
 
 		void pickUpAt(Point pos){
 			if(pos == null){return; }// null guard
-			int key = grid[pos.x][pos.y][0];
+			int key = grid[pos.x][pos.y][0]; //getting key from pos
 			if(key == 0){ return; } //tile guard
 			if(whiteTurn && key < 0) { return; } //wrong turn guard
 			if(!whiteTurn && key > 0) { return; } //wrong turn guard
@@ -56,25 +56,34 @@ public class Board {
 			if(currentlySelected != null){ //selected guard
 				if(currentlySelected.inAnimation){ return; } //animate guard
 			}
-			currentlySelected = new Piece(key, (key < 0) ? false : true, pos, this);
-			window.repaint();
+			currentlySelected = new Piece(key, (key < 0) ? false : true, pos, this); //adjusting currentlySelected to new var
+			window.repaint(); //repainting
 		}
-
+		
+		int[][][] futureMove(Point from, Point to, int[][][] grid){
+			int[][][] gridClone = getClone(grid); //artificial move
+			int key = gridClone[from.x][from.y][0];
+			gridClone[from.x][from.y][0] = 0; //future pos
+			gridClone[from.x][from.y][1] = 0;
+			gridClone[to.x][to.y][0] = key;
+			gridClone[to.x][to.y][1] = 1;
+			return gridClone;
+		}
+		
+		
 		void dropOffAt(Point pos){
 			if(!validMoveTo(currentlySelected.initialPos,pos, currentlySelected.type, currentlySelected.isWhite, currentlySelected.key, grid)) { return; } // not a valid move
 			//checking to see if spot will result in a check
-			int[][][] gridClone = getClone(grid); //artificial move
-			int key = gridClone[currentlySelected.initialPos.x][currentlySelected.initialPos.y][0];
-			gridClone[currentlySelected.initialPos.x][currentlySelected.initialPos.y][0] = 0;
-			gridClone[pos.x][pos.y][1] = 0;
-			gridClone[pos.x][pos.y][0] = key;
+			
+			int[][][] gridClone = futureMove(currentlySelected.initialPos, pos, grid); //chceking to see if future position will be check
+			
 			if(inCheck(gridClone) == GameState.CHECK_BLACK && !currentlySelected.isWhite){
-				if(currentlySelected.initialPos.x != pos.x || currentlySelected.initialPos.y != pos.y){
+				if(currentlySelected.initialPos.x != pos.x || currentlySelected.initialPos.y != pos.y){ //allow if putting down in check
 					return;
 				}
 			}
 			if(inCheck(gridClone) == GameState.CHECK_WHITE && currentlySelected.isWhite){
-				if(currentlySelected.initialPos.x != pos.x || currentlySelected.initialPos.y != pos.y){
+				if(currentlySelected.initialPos.x != pos.x || currentlySelected.initialPos.y != pos.y){ //allow if putting down in check
 					return;
 				}
 			}			
@@ -148,10 +157,7 @@ public class Board {
 				try{
 					if(validMoveTo(kingPos ,p, PieceType.getType(Math.abs(grid[kingPos.x][kingPos.y][0])), isWhite, grid[kingPos.x][kingPos.y][0], grid)){
 						//seeing if that move would also result in a check
-						int[][][] gridClone = getClone(grid); //artificial move
-						gridClone[kingPos.x][kingPos.y][0] = 0;
-						gridClone[kingPos.x][kingPos.y][1] = 0;
-						gridClone[p.x][p.y][0] = kingKey;
+						int[][][] gridClone = futureMove(kingPos, p, grid);
 						if(inCheck(gridClone) == GameState.IDLE){
 							//checkMate avoided
 							checkMate = false;
@@ -169,12 +175,7 @@ public class Board {
 						for(Point p : checkPath){
 							if(validMoveTo(possibleBlock , p, PieceType.getType(Math.abs(grid[row][col][0])), isWhite, grid[row][col][0], grid)){
 								//seeing if that move would also result in a check
-								int[][][] gridClone = getClone(grid); //artificial move
-								int keyClone = grid[possibleBlock.x][possibleBlock.y][0];
-								gridClone[possibleBlock.x][possibleBlock.y][0] = 0;
-								gridClone[possibleBlock.x][possibleBlock.y][1] = 0;
-								gridClone[p.x][p.y][0] = keyClone;
-								gridClone[p.x][p.y][1] = 1;
+								int[][][] gridClone = futureMove(possibleBlock, p, grid);
 								if(inCheck(gridClone) == GameState.IDLE){
 									//checkMate avoided
 									checkMate = false;
