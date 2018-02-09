@@ -52,10 +52,10 @@ public class Board {
 			if(whiteTurn && key < 0) { return; } //wrong turn guard
 			if(!whiteTurn && key > 0) { return; } //wrong turn guard
 			if(state == GameState.CHECKMATE_BLACK || state == GameState.CHECKMATE_WHITE){ return; } //gameover guard 
-			window.clickAlpha = !window.clickAlpha; //boolean flip
 			if(currentlySelected != null){ //selected guard
 				if(currentlySelected.inAnimation){ return; } //animate guard
 			}
+			window.clickAlpha = !window.clickAlpha; //boolean flip
 			currentlySelected = new Piece(key, (key < 0) ? false : true, pos, this); //adjusting currentlySelected to new var
 			window.repaint(); //repainting
 		}
@@ -72,7 +72,7 @@ public class Board {
 		
 		
 		void dropOffAt(Point pos){
-			if(!validMoveTo(currentlySelected.initialPos,pos, currentlySelected.type, currentlySelected.isWhite, currentlySelected.key, grid)) { return; } // not a valid move
+			if(!validMoveTo(currentlySelected.initialPos,pos, currentlySelected.type, currentlySelected.isWhite, currentlySelected.key, grid)) { return; } // not a valid move guard
 			//checking to see if spot will result in a check
 			
 			int[][][] gridClone = futureMove(currentlySelected.initialPos, pos, grid); //chceking to see if future position will be check
@@ -135,7 +135,8 @@ public class Board {
 			}
 			
 			if(state == GameState.IDLE){ return state; } //clear, not in check
-
+			
+			//if it made it this far check for checkmate
 			boolean isWhite = (state == GameState.CHECK_WHITE) ? true : false;
 			int kingKey = (state == GameState.CHECK_WHITE) ? 6 : -6;
 			Point kingPos = (state == GameState.CHECK_WHITE) ? kingPosW : kingPosB;
@@ -144,14 +145,14 @@ public class Board {
 			Point[] checkPath = getPath(possibleCheck,kingPos);
 			boolean checkMate = true;
 
-			//first try moving the checked king
+			//first try moving the checked king, forshadowing possible recovery
 			Point[] kingStruggle = new Point[]{new Point(kingPos.x+1, kingPos.y),new Point(kingPos.x-1, kingPos.y),new Point(kingPos.x, kingPos.y-1),new Point(kingPos.x, kingPos.y+1), new Point(kingPos.x-1, kingPos.y-1),new Point(kingPos.x+1, kingPos.y-1),new Point(kingPos.x-1, kingPos.y+1),new Point(kingPos.x+1, kingPos.y+1)};
 			for(Point p : kingStruggle){
 				try{
 					if(validMoveTo(kingPos ,p, PieceType.getType(Math.abs(grid[kingPos.x][kingPos.y][0])), isWhite, grid[kingPos.x][kingPos.y][0], grid)){
 						//seeing if that move would also result in a check
-						int[][][] gridClone = futureMove(kingPos, p, grid);
-						if(getState(gridClone) == GameState.IDLE){
+						int[][][] gridClone = futureMove(kingPos, p, grid); //getting possible future of king moving
+						if(getState(gridClone) == GameState.IDLE){ //the future move takes game state out of check
 							//checkMate avoided
 							checkMate = false;
 						}
@@ -160,16 +161,16 @@ public class Board {
 				}catch(Exception e) { } //edge guard
 			}
 
-			//second try blocking check path
+			//second try blocking check path, forshadowing possible recovery moves and if they will also result in check
 			for(int row = 0; row < grid.length; row++){
 				for(int col = 0; col < grid[0].length; col++){
-					if((grid[row][col][0] * kingKey > 0) && grid[row][col][0] != kingKey){ //scanning for allies
+					if((grid[row][col][0] * kingKey > 0) && grid[row][col][0] != kingKey){ //scanning for allies, not including king
 						Point possibleBlock = new Point(row,col);
 						for(Point p : checkPath){
 							if(validMoveTo(possibleBlock , p, PieceType.getType(Math.abs(grid[row][col][0])), isWhite, grid[row][col][0], grid)){
 								//seeing if that move would also result in a check
-								int[][][] gridClone = futureMove(possibleBlock, p, grid);
-								if(getState(gridClone) == GameState.IDLE){
+								int[][][] gridClone = futureMove(possibleBlock, p, grid); //getting possible future of a recovery move
+								if(getState(gridClone) == GameState.IDLE){  //the future move takes game state out of check
 									//checkMate avoided
 									checkMate = false;
 								}
@@ -181,10 +182,10 @@ public class Board {
 
 
 			}
-			if(checkMate){
+			if(checkMate){ // if boolean flag is triggered then there is a checkMate
 				state = (isWhite) ? GameState.CHECK_WHITE : GameState.CHECKMATE_BLACK;
 			}
-			return state;
+			return state; 
 		}
 
 		
