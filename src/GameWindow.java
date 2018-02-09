@@ -4,6 +4,7 @@ import java.awt.Point;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 
+import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
@@ -81,6 +82,14 @@ public class GameWindow extends JPanel{
 		JFrame frame = new JFrame("Chess");
 		frame.add(this);
 		frame.setPreferredSize(gameDim);
+		this.setLayout(null);
+		
+		JButton reset = new JButton("Reset");
+		reset.setBounds((int)(gameDim.getWidth() * .85), (int)(gameDim.getHeight() * .05), 100, 30);
+		reset.addActionListener(e -> {
+			gameStart();
+		});
+		this.add(reset);
 		frame.pack();
 		frame.setVisible(true);
 		frame.setResizable(false);
