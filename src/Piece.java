@@ -47,6 +47,9 @@ public class Piece {
 				//animation over
 				inAnimation = false;
 				//apply real value to solid board
+				if(Math.abs(key) == 1 && (finalPos.x == 0|| finalPos.x == b.grid.length)){
+					key*= 5; //Changing a pawn to queen if on other side
+				}
 				b.grid[finalPos.x][finalPos.y][0] = key;
 				//no longer first move of piece, turning 0 flag to 1
 				b.grid[finalPos.x][finalPos.y][1] = 1;
