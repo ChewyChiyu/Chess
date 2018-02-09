@@ -49,8 +49,7 @@ public class Board {
 			if(key == 0){ return; } //tile guard
 			if(whiteTurn && key < 0) { return; } //wrong turn guard
 			if(!whiteTurn && key > 0) { return; } //wrong turn guard
-			//if(state == GameState.CHECK_WHITE && key != 6){ return; } //check guard
-			//if(state == GameState.CHECK_BLACK && key != -6){ return; }
+			if(state == GameState.CHECKMATE_BLACK || state == GameState.CHECKMATE_WHITE){ return; } //gameover guard 
 			window.clickAlpha = !window.clickAlpha; //boolean flip
 			if(currentlySelected != null){ //selected guard
 				if(currentlySelected.inAnimation){ return; } //animate guard
@@ -82,6 +81,7 @@ public class Board {
 			Point possibleCheck = new Point();
 			GameState state = GameState.IDLE;
 			//scanning arr for king
+			//instance of inCheck() method here to initialize variables
 			for(int row = 0; row < grid.length; row++){
 				for(int col = 0; col < grid[0].length; col++){
 					if(grid[row][col][0] == 6){ //white king
