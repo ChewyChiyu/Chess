@@ -1,7 +1,8 @@
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Point;
-import java.util.ArrayList;
+
+import javax.swing.JOptionPane;
 
 public class Board {
 	//A 3D Array to keep track of all the pieces on the board and if they have been move: denoted by 1 and 0
@@ -103,6 +104,14 @@ public class Board {
 
 		void updateGameState(){ //checking to see the game State
 			state = scanForState(grid); //white , black scan for check
+			//if there is a check or checkMate, notify with GUI
+			if(state != GameState.IDLE){
+				JOptionPane.showMessageDialog(window,
+					    "" + state,
+					    "Game State Warning",
+					    JOptionPane.WARNING_MESSAGE);
+			}
+			
 		}			
 		
 		GameState scanForState(int[][][] grid){

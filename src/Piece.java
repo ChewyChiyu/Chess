@@ -62,15 +62,21 @@ public class Piece {
 		//setting spot in grid
 		b.grid[finalPos.x][finalPos.y][0] = key;
 		
-		b.updateGameState(); //updating the state of the game
 		//repaint
 		b.window.repaint();
+				
 		//drawing grid
 		if(initialPos.x != finalPos.x || initialPos.y != finalPos.y){ //same place guard
 			b.whiteTurn = !b.whiteTurn; //no longer whites turn 
 			//no longer first move of piece, turning 0 flag to 1
 			b.grid[finalPos.x][finalPos.y][1] = 1;
+			b.updateGameState(); //updating the state of the game
+			//repaint
+			b.window.repaint();
 		}
+
+		
+		
 		//b.drawBoard();
 	}
 
