@@ -3,18 +3,18 @@ import java.awt.Graphics;
 import java.awt.Point;
 
 public class Board {
+	//A 3D Array to keep track of all the pieces on the board and if they have been move: denoted by 1 and 0
+	final int[][][] STANDARD_GRID = new int[][][]{{{-2 , 0} , {-4 , 0} , {-3 , 0} , {-5 , 0} , {-6 , 0} , {-3 , 0} , {-4 , 0} , {-2 , 0}},
+		{{-1 , 0} , {-1 , 0} , {-1 , 0} , {-1 , 0} , {-1 , 0} , {-1 , 0} , {-1 , 0} , {-1 , 0}},
+		{{0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0}},
+		{{0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0}},
+		{{0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0}},
+		{{0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0} , {0 , 0}},
+		{{1 , 0} , {1 , 0} , {1 , 0} , {1 , 0} , {1 , 0} , {1 , 0} , {1 , 0} , {1 , 0}},
+		{{2 , 0} , {4 , 0} , {3 , 0} , {6 , 0} , {5 , 0} , {3 , 0} , {4 , 0} , {2 , 0}}}; 
 
-	final int[][] STANDARD_GRID = new int[][]{{-2 , -4 , -3 , -5 , -6 , -3 , -4 , -2},
-		{-1 , -1 , -1 , -1 , -1 , -1 , -1 , -1},
-		{0 , 0 , 0 , 0 , 0 , 0 , 0 , 0},
-		{0 , 0 , 0 , 0 , 0 , 0 , 0 , 0},
-		{0 , 0 , 0 , 0 , 0 , 0 , 0 , 0},
-		{0 , 0 , 0 , 0 , 0 , 0 , 0 , 0},
-		{1 , 1 , 1 , 1 , 1 , 1 , 1 , 1},
-		{2 , 4 , 3 , 6 , 5 , 3 , 4 , 2}};
 
-
-		int[][] grid; 
+		int[][][] grid; 
 
 		GameWindow window;
 
@@ -26,7 +26,7 @@ public class Board {
 		boolean whiteTurn;
 
 		public Board(int row, int col, GameWindow window){
-			grid = new int[row][col];
+			grid = new int[row][col][1];
 			this.window = window;
 			whiteTurn = true;
 			SPACER = (int) (((window.gameDim.height/grid.length)) * 0.97);
@@ -42,7 +42,7 @@ public class Board {
 
 		void pickUpAt(Point pos){
 			if(pos == null){return; }// null guard
-			int key = grid[pos.x][pos.y];
+			int key = grid[pos.x][pos.y][0];
 			if(key == 0){ return; } //tile guard
 			if(whiteTurn && key < 0) { return; } //wrong turn guard
 			if(!whiteTurn && key > 0) { return; } //wrong turn guard
@@ -62,7 +62,8 @@ public class Board {
 			currentlySelected.inSelection = false;
 			currentlySelected.finalPos = pos;
 			//clear initial grid space
-			grid[currentlySelected.initialPos.x][currentlySelected.initialPos.y] = 0;
+			grid[currentlySelected.initialPos.x][currentlySelected.initialPos.y][0] = 0; //reseting key
+			grid[currentlySelected.initialPos.x][currentlySelected.initialPos.y][1] = 0; //reseting first pick mask
 			//begin animation
 			currentlySelected.animate();
 		}
@@ -76,9 +77,9 @@ public class Board {
 		}
 
 		void drawBoard(){
-			for(int[] row : grid){
-				for(int col : row){
-					System.out.print(col + ((col < 0) ? " " : "  ")); // spacing out pieces
+			for(int[][] row : grid){
+				for(int[] col : row){
+					System.out.print(col[0] + "," + col[1] + ((col[0] < 0) ? " |" : "  |")); // spacing out pieces
 				}
 				System.out.println();
 			}
@@ -110,7 +111,7 @@ public class Board {
 
 					//draw piece second
 
-					int key = grid[row][col]; //if negative then it is black, 0 is not a piece
+					int key = grid[row][col][0]; //if negative then it is black, 0 is not a piece
 					if(key != 0){ //0 is a tile
 						PieceType type = PieceType.getType(Math.abs(key));
 						g.drawImage((key < 0) ? type.blackDraw : type.whiteDraw, xBuffer, yBuffer, SPACER, SPACER,  window);

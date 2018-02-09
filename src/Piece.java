@@ -47,12 +47,14 @@ public class Piece {
 				//animation over
 				inAnimation = false;
 				//apply real value to solid board
-				b.grid[finalPos.x][finalPos.y] = key;
+				b.grid[finalPos.x][finalPos.y][0] = key;
+				//no longer first move of piece, turning 0 flag to 1
+				b.grid[finalPos.x][finalPos.y][1] = 1;
 				//repaint
 
 				b.window.repaint();
 				//drawing grid
-				//b.drawBoard();
+				b.drawBoard();
 			}
 
 		});
@@ -66,7 +68,7 @@ public class Piece {
 		}
 
 		//trying to take own team
-		if((b.grid[p.x][p.y] * b.grid[initialPos.x][initialPos.y] > 0) && (b.grid[p.x][p.y] * b.grid[initialPos.x][initialPos.y] != 0)){
+		if((b.grid[p.x][p.y][0] * b.grid[initialPos.x][initialPos.y][0] > 0) && (b.grid[p.x][p.y][0] * b.grid[initialPos.x][initialPos.y][0] != 0)){
 			return false;
 		}
 
@@ -103,20 +105,28 @@ public class Piece {
 			}
 			
 			//checking for proper forward
-			if(Math.abs(p.x-initialPos.x) > 1){
-				return false;
+			if(b.grid[initialPos.x][initialPos.y][1] == 0){ // has not moved
+				if(Math.abs(p.x-initialPos.x) > 2){
+					return false;
+				}
+				straightPathClear(p);
+			}else{
+				if(Math.abs(p.x-initialPos.x) > 1){
+					return false;
+				}
 			}
+			
 			if(Math.abs(p.y-initialPos.y) > 1){
 				return false;
 			}
 			//checking for proper diagonal and forward
 			if(Math.abs(p.y-initialPos.y) == 1){
-				if(b.grid[p.x][p.y] * key == 0){
+				if(b.grid[p.x][p.y][0] * key == 0){
 					return false;
 				}
 			}
 			if(Math.abs(p.x-initialPos.x) == 1 && Math.abs(p.y-initialPos.y) == 0){
-				if(b.grid[p.x][p.y] * key != 0){
+				if(b.grid[p.x][p.y][0] * key != 0){
 					return false;
 				}
 			}
@@ -173,7 +183,7 @@ public class Piece {
 		for(int index = 0; index < moveCount; index++){
 			x += incX;
 			y += incY;
-			if(b.grid[x][y] != 0){ //a piece was in the way
+			if(b.grid[x][y][0] != 0){ //a piece was in the way
 				//first checking to see if trying to take already set point
 				if(index != moveCount-1){
 					return false;
