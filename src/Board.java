@@ -69,7 +69,26 @@ public class Board {
 
 		void dropOffAt(Point pos){
 			if(!validMoveTo(currentlySelected.initialPos,pos, currentlySelected.type, currentlySelected.isWhite, currentlySelected.key, grid)) { return; } // not a valid move
+			
+			//checking to see if spot will result in a check
+			int[][][] gridClone = getClone(grid); //artificial move
+			int key = gridClone[currentlySelected.initialPos.x][currentlySelected.initialPos.y][0];
+			gridClone[currentlySelected.initialPos.x][currentlySelected.initialPos.y][0] = 0;
+			gridClone[pos.x][pos.y][1] = 0;
+			gridClone[pos.x][pos.y][0] = key;
+			drawBoard(gridClone);
+			if(inCheck(gridClone) == GameState.CHECK_BLACK && !currentlySelected.isWhite){
+				return;
+			}
+			if(inCheck(gridClone) == GameState.CHECK_WHITE && currentlySelected.isWhite){
+				return;
+			}
+			
+			
 			window.clickAlpha = !window.clickAlpha;//boolean flip
+			
+			
+				
 			//queue in currentlySelected postions
 			currentlySelected.inSelection = false;
 			currentlySelected.finalPos = pos;
@@ -141,7 +160,7 @@ public class Board {
 							gridClone[kingPos.x][kingPos.y][0] = 0;
 							gridClone[kingPos.x][kingPos.y][1] = 0;
 							gridClone[p.x][p.y][0] = kingKey;
-							if(!inCheck(gridClone)){
+							if(inCheck(gridClone) == GameState.IDLE){
 								//checkMate avoided
 								inCheckChoices.add(kingPos); //adding possible block to choices
 								checkMate = false;
@@ -164,7 +183,7 @@ public class Board {
 									gridClone[possibleBlock.x][possibleBlock.y][0] = 0;
 									gridClone[possibleBlock.x][possibleBlock.y][1] = 0;
 									gridClone[p.x][p.y][0] = keyClone;
-									if(!inCheck(gridClone)){
+									if(inCheck(gridClone) == GameState.IDLE){
 										//checkMate avoided
 										inCheckChoices.add(possibleBlock); //adding possible block to choices
 										checkMate = false;
@@ -195,7 +214,7 @@ public class Board {
 			return cloned;
 		}
 		
-		boolean inCheck(int[][][] grid){
+		GameState inCheck(int[][][] grid){
 			Point kingPosW = new Point();
 			Point kingPosB = new Point();
 			//scanning arr for king
@@ -215,17 +234,17 @@ public class Board {
 				for(int col = 0; col < grid[0].length; col++){
 					if(grid[row][col][0] < 0){ //black pos
 						if(validMoveTo(new Point(row,col), kingPosW, PieceType.getType(Math.abs(grid[row][col][0])), true, grid[row][col][0], grid )){
-							return true;
+							return GameState.CHECK_WHITE;
 						}
 					}
 					if(grid[row][col][0] > 0){ //white pos
 						if(validMoveTo(new Point(row,col), kingPosB, PieceType.getType(Math.abs(grid[row][col][0])), false, grid[row][col][0], grid )){
-							return true;
+							return GameState.CHECK_BLACK;
 						}
 					}
 				}
 			}
-			return false;
+			return GameState.IDLE;
 		}
 
 
