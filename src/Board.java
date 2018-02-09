@@ -25,11 +25,14 @@ public class Board {
 
 		boolean whiteTurn;
 
+		GameState state;
+
 		public Board(int row, int col, GameWindow window){
 			grid = new int[row][col][1];
 			this.window = window;
 			whiteTurn = true;
 			SPACER = (int) (((window.gameDim.height/grid.length)) * 0.97);
+			state = GameState.IDLE;
 			resetBoard(row,col);
 			drawBoard();
 		}
@@ -46,6 +49,8 @@ public class Board {
 			if(key == 0){ return; } //tile guard
 			if(whiteTurn && key < 0) { return; } //wrong turn guard
 			if(!whiteTurn && key > 0) { return; } //wrong turn guard
+			//if(state == GameState.CHECK_WHITE && key != 6){ return; } //check guard
+			//if(state == GameState.CHECK_BLACK && key != -6){ return; }
 			window.clickAlpha = !window.clickAlpha; //boolean flip
 			if(currentlySelected != null){ //selected guard
 				if(currentlySelected.inAnimation){ return; } //animate guard
@@ -55,8 +60,7 @@ public class Board {
 		}
 
 		void dropOffAt(Point pos){
-			if(!validMove(pos)) { return; } // not a valid move
-			whiteTurn = !whiteTurn; //no longer whites turn 
+			if(!validMoveTo(currentlySelected.initialPos,pos, currentlySelected.type, currentlySelected.isWhite, currentlySelected.key, grid)) { return; } // not a valid move
 			window.clickAlpha = !window.clickAlpha;//boolean flip
 			//queue in currentlySelected postions
 			currentlySelected.inSelection = false;
@@ -68,9 +72,288 @@ public class Board {
 			currentlySelected.animate();
 		}
 
-		boolean validMove(Point pos){ //this is where the valid move is checked
-			return currentlySelected.validMoveTo(pos); //guard of valid position before the actual final position is placed
+		void updateGameState(){ //checking to see the game State
+			state = scanForState(grid); //white , black scan for check
+		}			
+
+		GameState scanForState(int[][][] grid){
+			Point kingPosW = new Point();
+			Point kingPosB = new Point();
+			Point possibleCheck = new Point();
+			GameState state = GameState.IDLE;
+			//scanning arr for king
+			for(int row = 0; row < grid.length; row++){
+				for(int col = 0; col < grid[0].length; col++){
+					if(grid[row][col][0] == 6){ //white king
+						kingPosW.setLocation(row, col);
+					}
+					if(grid[row][col][0] == -6){
+						kingPosB.setLocation(row, col);
+					}
+				}
+			}
+
+			//scanning arr for possibleCheck points
+			for(int row = 0; row < grid.length; row++){
+				for(int col = 0; col < grid[0].length; col++){
+					if(grid[row][col][0] < 0){ //black pos
+						if(validMoveTo(new Point(row,col), kingPosW, PieceType.getType(Math.abs(grid[row][col][0])), true, grid[row][col][0], grid )){
+							state = GameState.CHECK_WHITE;
+							possibleCheck = new Point(row,col);
+						}
+					}
+					if(grid[row][col][0] > 0){ //white pos
+						if(validMoveTo(new Point(row,col), kingPosB, PieceType.getType(Math.abs(grid[row][col][0])), false, grid[row][col][0], grid )){
+							state = GameState.CHECK_BLACK;
+							possibleCheck = new Point(row,col);
+						}
+					}
+				}
+
+			}
+			//if in check
+			if(state == GameState.CHECK_BLACK){ //look for recovery options, trying to block checkPath
+				//check Path
+				Point[] checkPath = getPath(possibleCheck,kingPosB);
+				boolean checkMate = true;
+
+				//first try moving the checked king
+				Point[] kingStruggle = new Point[]{new Point(kingPosB.x+1, kingPosB.y),new Point(kingPosB.x-1, kingPosB.y),new Point(kingPosB.x, kingPosB.y-1),new Point(kingPosB.x, kingPosB.y+1), new Point(kingPosB.x-1, kingPosB.y-1),new Point(kingPosB.x+1, kingPosB.y-1),new Point(kingPosB.x-1, kingPosB.y+1),new Point(kingPosB.x+1, kingPosB.y+1)};
+				for(Point p : kingStruggle){
+					try{
+						if(validMoveTo(kingPosB ,p, PieceType.getType(Math.abs(grid[kingPosB.x][kingPosB.y][0])), false, grid[kingPosB.x][kingPosB.y][0], grid)){
+							//seeing if that move would also result in a check
+							int[][][] gridClone = getClone(grid); //artificial move
+							gridClone[kingPosB.x][kingPosB.y][0] = 0;
+							gridClone[kingPosB.x][kingPosB.y][1] = 0;
+							gridClone[p.x][p.y][0] = -6;
+							if(!isInCheck(gridClone)){
+								//checkMate avoided
+								checkMate = false;
+							}
+
+						}
+					}catch(Exception e) { } //edge guard
+				}
+
+				//second try blocking check path
+				for(int row = 0; row < grid.length; row++){
+					for(int col = 0; col < grid[0].length; col++){
+						if(grid[row][col][0] < 0){ //scanning for allies
+							Point possibleBlock = new Point(row,col);
+							for(Point p : checkPath){
+								if(validMoveTo(possibleBlock , p, PieceType.getType(Math.abs(grid[row][col][0])), false, grid[row][col][0], grid)){
+									//seeing if that move would also result in a check
+									int[][][] gridClone = getClone(grid); //artificial move
+									int keyClone = grid[possibleBlock.x][possibleBlock.y][0];
+									gridClone[possibleBlock.x][possibleBlock.x][0] = 0;
+									gridClone[possibleBlock.x][possibleBlock.x][1] = 0;
+									gridClone[p.x][p.y][0] = keyClone;
+									if(!isInCheck(gridClone)){
+										//checkMate avoided
+										checkMate = false;
+									}
+								}
+							}
+						}
+					}
+				}
+				if(checkMate){
+					state = GameState.CHECKMATE_BLACK;
+				}
+
+			}
+
+			return state;
 		}
+
+
+		int[][][] getClone(int[][][] grid){
+			int[][][] cloned = new int[grid.length][grid[0].length][grid[0][0].length];
+			for(int x = 0; x < cloned.length; x++){
+				for(int y = 0; y < cloned[0].length; y++){
+					for(int z = 0; z < cloned[0][0].length; z++){
+						cloned[x][y][z] = grid[x][y][z];
+					}
+				}
+			}
+			return cloned;
+		}
+		
+		boolean isInCheck(int[][][] grid){
+			Point kingPosW = new Point();
+			Point kingPosB = new Point();
+			//scanning arr for king
+			for(int row = 0; row < grid.length; row++){
+				for(int col = 0; col < grid[0].length; col++){
+					if(grid[row][col][0] == 6){ //white king
+						kingPosW.setLocation(row, col);
+					}
+					if(grid[row][col][0] == -6){
+						kingPosB.setLocation(row, col);
+					}
+				}
+			}
+
+			//scanning arr for possibleCheck points
+			for(int row = 0; row < grid.length; row++){
+				for(int col = 0; col < grid[0].length; col++){
+					if(grid[row][col][0] < 0){ //black pos
+						if(validMoveTo(new Point(row,col), kingPosW, PieceType.getType(Math.abs(grid[row][col][0])), true, grid[row][col][0], grid )){
+							return true;
+						}
+					}
+					if(grid[row][col][0] > 0){ //white pos
+						if(validMoveTo(new Point(row,col), kingPosB, PieceType.getType(Math.abs(grid[row][col][0])), false, grid[row][col][0], grid )){
+							return true;
+						}
+					}
+				}
+			}
+			return false;
+		}
+
+
+		boolean validMoveTo(Point o , Point p, PieceType type, boolean isWhite, int key, int[][][] grid){  //switch of piece type
+
+			//first checking to see if trying to take already set point
+			if(o.x == p.x && o.y == p.y){
+				return true;
+			}
+
+			//trying to take own team
+			if((grid[p.x][p.y][0] * grid[o.x][o.y][0] > 0) && (grid[p.x][p.y][0] * grid[o.x][o.y][0] != 0)){
+				return false;
+			}
+
+
+			switch(type){
+			case BISHOP:
+				if(Math.abs(p.x-o.x) != Math.abs(p.y-o.y)){ //improper diagonal
+					return false;
+				}
+				if(!straightPathClear(o,p)){ 
+					return false;
+				}
+				break;
+			case KING:
+				if(Math.abs(p.x-o.x) > 1 || Math.abs(p.y-o.y) > 1 ){ // one space move
+					return false;
+				}
+				break;
+			case KNIGHT:
+				if(Math.abs(p.x-o.x) * Math.abs(p.y-o.y) != 2){ //not L shape: against rules
+					return false;
+				}
+				break;
+			case PAWN:
+				//checking to see if move in right direction
+				if(isWhite){
+					if(p.x-o.x > 0){
+						return false;
+					}
+				}else{
+					if(p.x-o.x < 0){
+						return false;
+					}
+				}
+
+				//checking for proper forward
+				if(grid[o.x][o.y][1] == 0){ // has not moved
+					if(Math.abs(p.x-o.x) > 2){
+						return false;
+					}
+					straightPathClear(o,p);
+				}else{
+					if(Math.abs(p.x-o.x) > 1){
+						return false;
+					}
+				}
+
+				if(Math.abs(p.y-o.y) > 1){
+					return false;
+				}
+				//checking for proper diagonal and forward
+				if(Math.abs(p.y-o.y) == 1){
+					if(grid[p.x][p.y][0] * key == 0){
+						return false;
+					}
+				}
+				if(Math.abs(p.x-o.x) == 1 && Math.abs(p.y-o.y) == 0){
+					if(grid[p.x][p.y][0] * key != 0){
+						return false;
+					}
+				}
+				break;
+			case QUEEN:
+				if(Math.abs(p.x-o.x) != 0 && Math.abs(p.y - o.y) != 0){ // a diagonal is formed : against rules
+					if(Math.abs(p.x-o.x) != Math.abs(p.y-o.y)){ //improper diagonal
+						return false;
+					}
+				}
+
+				if(!straightPathClear(o,p)){ 
+					return false;
+				}
+				break;
+			case ROOK:
+
+				if(Math.abs(p.x-o.x) != 0 && Math.abs(p.y - o.y) != 0){ // a diagonal is formed : against rules
+					return false;
+				}
+
+				if(!straightPathClear(o,p)){ 
+					return false;
+				}
+				break;
+			}
+			return true;
+		}
+
+		boolean straightPathClear(Point o, Point pos){//return true if no piece in straight line / diagonal line, dx and dy must equal
+			Point[] path = getPath(o,pos);
+			for(int index = 0; index < path.length; index++){
+				if(grid[path[index].x][path[index].y][0] != 0){
+					if(index != path.length-1){
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+
+		Point[] getPath(Point o, Point pos){
+			int dx = pos.x - o.x;
+			int dy = pos.y - o.y;
+			int moveCount = (dx == 0) ? Math.abs(dy) : Math.abs(dx);
+			Point[] pointArr = new Point[moveCount]; //dx == dy anyways
+
+			int incX = 0;
+			int incY = 0;
+
+			if(dx < 0){
+				incX = -1;
+			}else if(dx > 0){
+				incX = 1;
+			}
+
+			if(dy < 0){
+				incY = -1;
+			}else if(dy > 0){
+				incY = 1;
+			}
+
+			int x = o.x;
+			int y = o.y;
+
+			for(int index = 0; index < moveCount; index++){
+				x += incX;
+				y += incY;
+				pointArr[index] = new Point(x,y);
+			}	
+			return pointArr;
+		}
+
 
 		void draw(Graphics g){
 			drawGrid(g);

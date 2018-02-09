@@ -1,4 +1,6 @@
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
@@ -99,6 +101,13 @@ public class GameWindow extends JPanel{
 	public void paintComponent(Graphics g){
 		super.paintComponent(g);
 		drawSprites(g);
+		drawStats(g);
+	}
+	void drawStats(Graphics g){
+		g.setColor(Color.BLACK);
+		g.setFont(new Font("Aerial",Font.BOLD,15));
+		g.drawString((gameBoard.whiteTurn) ? "TURN: WHITE" : "TURN: BLACK", (int)(gameDim.getWidth() * 0.82), (int)(gameDim.getHeight() * 0.03));
+		g.drawString( "" + gameBoard.state , (int)(gameDim.getWidth() * 0.82), (int)(gameDim.getHeight() * 0.05));
 	}
 	void drawSprites(Graphics g){
 		gameBoard.draw(g);
